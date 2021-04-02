@@ -167,33 +167,87 @@ public class Parser {
     // This function corresponds to the "relop" production rule in grammar.txt
     func parseBooleanExpression() throws -> BooleanExpression? {
         // YOU FILL IN HERE
-        return nil
-    }
+        if let expr = try parseExpression() {
+            let startRange = expr.range
+            let operation = current
+            index += 1
+            if let expr2 = try parseExpression() {
+                let endRange = expr2.range
+                return BooleanExpression(operation: operation, left: expr, right: expr2, range: startRange.lowerBound..<endRange.upperBound)
+            }
+        }
+        throw ParserError.ParseError(explanation: "Expected expression", token: current)
+        }
     
     // MARK: Parsing Statements
     
     // Parse a GOSUB statement from the "statement" production rule in grammar.txt
     func parseGoSub(lineNumber: Int16) throws -> GoSubCall? {
         // YOU FILL IN HERE
-        return nil
+        if case let .gosub(startRange) = current {
+            index += 1
+            if case let .number(endRange, value) = current {
+                index += 1
+                return GoSubCall(gotoLine: value, line: lineNumber, range: startRange.lowerBound..<endRange.upperBound)
+            }
+            throw ParserError.ParseError(explanation: "Number missing after gosub", token: current)
+        }
+        throw ParserError.ParseError(explanation: "Expected gosub token", token: current)
     }
     
     // Parse a LET statement from the "statement" production rule in grammar.txt
     func parseLet(lineNumber: Int16) throws -> VarSet? {
         // YOU FILL IN HERE
-        return nil
+        if case let .letT(startRange) = current {
+            index += 1
+            if case let .variable(_, value) = current {
+                index += 1
+                if case .equal = current {
+                    index += 1
+                    if let expr = try parseExpression() {
+                        let endRange = expr.range
+                        return VarSet(name: value, value: expr, line: lineNumber, range: startRange.lowerBound..<endRange.upperBound)
+                    }
+                    throw ParserError.ParseError(explanation: "Expected expression", token: current)
+                }
+                throw ParserError.ParseError(explanation: "Expected declaration", token: current)
+            }
+            throw ParserError.ParseError(explanation: "Expected variable name", token: current)
+        }
+        throw ParserError.ParseError(explanation: "Expected let token", token: current)
     }
     
     // Parse a GOTO statement from the "statement" production rule in grammar.txt
     func parseGoTo(lineNumber: Int16) throws -> GoToCall? {
-        // YOU FILL IN HERE
-        return nil
+        if case let .goto(startRange) = current {
+            index += 1
+            if case let .number(endRange, value) = current {
+                index += 1
+                return GoToCall(gotoLine: value, line: lineNumber, range: startRange.lowerBound..<endRange.upperBound)
+            }
+            throw ParserError.ParseError(explanation: "Number missing after goto", token: current)
+        }
+        throw ParserError.ParseError(explanation: "Expected goto token", token: current)
     }
     
     // Parse an IF statement from the "statement" production rule in grammar.txt
     func parseIf(lineNumber: Int16) throws -> IfStatement? {
         // YOU FILL IN HERE
-        return nil
+        if case let .ifT(startRange) = current {
+            index += 1
+            if let boolean = try parseBooleanExpression() {
+                if case .then = current {
+                    index += 1
+                    if let statement = try parseStatement(line: lineNumber) {
+                        let endRange = statement.range
+                        return IfStatement(booleanExpression: boolean, thenStatement: statement, line: lineNumber, range: startRange.lowerBound..<endRange.upperBound)
+                    }
+                }
+                throw ParserError.ParseError(explanation: "Expected then statement", token: current)
+            }
+            throw ParserError.ParseError(explanation: "Expected expression", token: current)
+        }
+        throw ParserError.ParseError(explanation: "Expected if token", token: current)
     }
     
     // Parse a PRINT statement from the "statement" production rule in grammar.txt

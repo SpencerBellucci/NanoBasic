@@ -90,6 +90,38 @@ extension BASICPlayer {
             }
             statementIndex += 1
         // YOU FILL IN HERE the other cases: LET, IF, GOTO, GOSUB, RETURN
+        case let letCall as VarSet:
+            let varName = letCall.name
+            statementIndex += 1
+            let varExpr = evaluate(expression: letCall.value)
+            variableTable[varName.lowercased()] = varExpr
+            
+        case let gotoStatement as GoToCall:
+            let gotoLine = gotoStatement.gotoLine
+            if let index = findLineIndex(lineNumber: gotoLine) {
+                statementIndex = index
+            }
+            
+        case let gosubStatement as GoSubCall:
+            let gosubLine = gosubStatement.gotoLine
+            let gosubReturn = gosubStatement.line + 10
+            if let index = findLineIndex(lineNumber: gosubLine) {
+                statementIndex = index
+            }
+            subroutineStack.push(Int(gosubReturn))
+            
+        case is ReturnStatement:
+            let returnLine = subroutineStack.pop()
+            if let returnIndex = findLineIndex(lineNumber: Int16(returnLine!)) {
+                statementIndex = returnIndex
+            }
+            
+        case let ifStatement as IfStatement:
+            let expr = ifStatement.booleanExpression
+            let then = ifStatement.thenStatement
+            if evaluate(booleanExpression: expr) {
+                try interpret(statement: then)
+            }
         default:
             break
         }
@@ -107,6 +139,45 @@ extension BASICPlayer {
     // evaluating each of the two operands
     public func evaluate(booleanExpression: BooleanExpression) -> Bool {
         // YOU FILL IN HERE
+        let left = booleanExpression.left
+        let right = booleanExpression.right
+        let operation = booleanExpression.operation
+        
+        switch operation {
+        case .notEqual:
+            if evaluate(expression: left) != evaluate(expression: right) {
+                return true
+            }
+            break
+        case .equal:
+            if evaluate(expression: left) == evaluate(expression: right) {
+                return true
+            }
+            break
+        case .lessThan:
+            if evaluate(expression: left) < evaluate(expression: right) {
+                return true
+            }
+            break
+        case .greaterThan:
+            if evaluate(expression: left) > evaluate(expression: right) {
+                return true
+            }
+            break
+        case .lessThanEqual:
+            if evaluate(expression: left) <= evaluate(expression: right) {
+                return true
+            }
+            break
+        case .greaterThanEqual:
+            if evaluate(expression: left) >= evaluate(expression: right) {
+                return true
+            }
+            break
+        default:
+            print("error")
+        }
+        
         return false
     }
     
